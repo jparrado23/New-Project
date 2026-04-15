@@ -1,0 +1,28 @@
+subreddits:
+  - wallstreetbets
+  - stocks
+  - investing
+include_comments: true
+lookback_hours: 24
+report_output_dir: reports
+database_path: data/pipeline.db
+stock_universe_path: data/us_stock_universe.csv
+anomaly_baseline_window_days: 30
+shortlist:
+  min_mentions: 2
+  min_unique_authors: 2
+  anomaly_score_threshold: 0.5
+market_data:
+  price_windows:
+    - 1
+    - 3
+    - 5
+  provider: mock
+llm:
+  enabled: false
+  provider: mock
+  model: placeholder-model
+  max_items_per_run: 25
+logging:
+  level: INFO
+  json: false
