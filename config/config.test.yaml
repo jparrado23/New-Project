@@ -4,14 +4,14 @@ subreddits:
   - investing
 include_comments: true
 lookback_hours: 24
-report_output_dir: reports
-database_path: data/pipeline.db
+report_output_dir: reports/test_run
+database_path: data/test_pipeline.db
 stock_universe_path: data/us_stock_universe.csv
 anomaly_baseline_window_days: 30
 shortlist:
-  min_mentions: 2
-  min_unique_authors: 2
-  anomaly_score_threshold: 0.5
+  min_mentions: 1
+  min_unique_authors: 1
+  anomaly_score_threshold: 0.1
 market_data:
   price_windows:
     - 1
@@ -21,8 +21,8 @@ market_data:
 llm:
   enabled: false
   provider: mock
-  model: gpt-4o-mini
-  max_items_per_run: 25
+  model: placeholder-model
+  max_items_per_run: 10
   api_key_env_var: OPENAI_API_KEY
   base_url:
   system_prompt: |

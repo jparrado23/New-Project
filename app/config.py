@@ -23,6 +23,14 @@ class LLMConfig(BaseModel):
     provider: str = "mock"
     model: str = "placeholder-model"
     max_items_per_run: int = 25
+    api_key_env_var: str = "OPENAI_API_KEY"
+    base_url: str | None = None
+    system_prompt: str = (
+        "You are classifying Reddit discussion about US-listed stocks for a human analyst. "
+        "Distinguish between early attention, post-price-move chatter, pump-like behavior, "
+        "and thesis-driven discussion. Do not give investment advice."
+    )
+    max_input_chars: int = 6000
 
 
 class LoggingConfig(BaseModel):

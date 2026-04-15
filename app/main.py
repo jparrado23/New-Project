@@ -10,14 +10,15 @@ from app.config import AppConfig, load_config
 from app.ingestion import MockRedditProvider, RedditIngestionService
 from app.market import MarketDataService, MockMarketDataProvider
 from app.models.market import AggregatedStockDailyFeatures
-from app.nlp import LightweightNLP, MockLLMClassifier
+from app.nlp import LightweightNLP, MockLLMClassifier, build_llm_classifier
 from app.reporting import render_markdown_report, write_csv_report
 from app.signals import compute_anomaly_scores, synthesize_signals
 from app.storage import Database, PipelineRepository
 from app.tickers import TickerExtractor, load_stock_universe
-from app.utils import configure_logging, parse_run_date
+from app.utils import configure_logging, get_logger, parse_run_date
 
 cli = typer.Typer(help="Reddit US stocks signal pipeline CLI")
+logger = get_logger(__name__)
 
 
 def _bootstrap(config_path: str | None) -> tuple[AppConfig, Database, PipelineRepository]:
@@ -38,6 +39,20 @@ def _run_stage(repo: PipelineRepository, run_date: str, stage: str, fn):
     except Exception as exc:
         repo.finish_run(run_id, "failed", 0, str(exc))
         raise
+
+
+def _shortlist_tickers(
+    aggregates: list[AggregatedStockDailyFeatures], config: AppConfig
+) -> list[AggregatedStockDailyFeatures]:
+    shortlisted = [
+        aggregate
+        for aggregate in aggregates
+        if aggregate.mention_count >= config.shortlist.min_mentions
+        and aggregate.unique_authors >= config.shortlist.min_unique_authors
+        and aggregate.anomaly_score >= config.shortlist.anomaly_score_threshold
+    ]
+    shortlisted.sort(key=lambda item: (item.anomaly_score, item.mention_count, item.unique_authors), reverse=True)
+    return shortlisted[: config.llm.max_items_per_run]
 
 
 @cli.command("init-db")
@@ -103,11 +118,21 @@ def run_all(
         aggregates = compute_anomaly_scores(aggregates)
         repo.insert_daily_stock_aggregates(aggregates)
 
-        classifier = MockLLMClassifier()
         classifications = []
-        for ticker in tickers:
-            texts = [item_by_id[item_id].text for item_id in grouped_item_ids[ticker]]
-            classifications.append(classifier.classify_text(ticker, " ".join(texts)))
+        llm_candidates = _shortlist_tickers(aggregates, config)
+        classifier = build_llm_classifier(config.llm) if config.llm.enabled else MockLLMClassifier()
+        if config.llm.enabled:
+            logger.info(
+                "llm_shortlist_selected",
+                extra={
+                    "candidate_count": len(llm_candidates),
+                    "provider": config.llm.provider,
+                    "model": config.llm.model,
+                },
+            )
+        for candidate in (llm_candidates if config.llm.enabled else aggregates):
+            texts = [item_by_id[item_id].text for item_id in grouped_item_ids[candidate.ticker]]
+            classifications.append(classifier.classify_text(candidate.ticker, "\n\n".join(texts)))
         repo.insert_classifications(classifications)
 
         market_by_ticker = {snapshot.ticker: snapshot for snapshot in market_snapshots}

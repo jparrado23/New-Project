@@ -9,6 +9,7 @@ description = "Daily Reddit-based US stock signal pipeline for human review"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+  "openai>=1.99.0",
   "pandas>=2.2.0",
   "pydantic>=2.7.0",
   "pydantic-settings>=2.2.1",

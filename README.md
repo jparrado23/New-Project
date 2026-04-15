@@ -32,6 +32,22 @@ The pipeline reads YAML configuration validated by Pydantic. A sample file lives
 
 Set `APP_CONFIG_PATH` or pass `--config` on the CLI.
 
+### LLM Configuration
+
+Stage 1 now supports two LLM modes:
+
+- `provider: mock` for local pipeline testing without external API calls
+- `provider: openai` for structured classification through the OpenAI Responses API
+
+The OpenAI path expects:
+
+- `OPENAI_API_KEY` exported in your shell or `.env`
+- `llm.enabled: true`
+- `llm.provider: openai`
+- a supported structured-output model such as `gpt-4o-mini`
+
+Codex itself is not the runtime provider for this repository. Codex can help write and debug the code, but the pipeline needs an API-backed model client at execution time.
+
 ## Database Initialization
 
 ```bash
@@ -56,6 +72,21 @@ python -m app.main ingest --config config/config.example.yaml
 python -m app.main extract-tickers --config config/config.example.yaml
 python -m app.main fetch-market --date 2026-04-15 --config config/config.example.yaml
 python -m app.main run-all --date 2026-04-15 --config config/config.example.yaml
+```
+
+For a quick local smoke test with isolated output, use [config/config.test.yaml](/Users/juanparrado/Documents/New%20project/config/config.test.yaml):
+
+```bash
+python -m app.main init-db --config config/config.test.yaml
+python -m app.main run-all --date 2026-04-15 --config config/config.test.yaml
+```
+
+To test the real LLM path, use [config/config.openai.test.yaml](/Users/juanparrado/Documents/New%20project/config/config.openai.test.yaml) after exporting `OPENAI_API_KEY`:
+
+```bash
+export OPENAI_API_KEY="your_api_key_here"
+python -m app.main init-db --config config/config.openai.test.yaml
+python -m app.main run-all --date 2026-04-15 --config config/config.openai.test.yaml
 ```
 
 Implemented Stage 1 commands are runnable with mock providers. The `aggregate`, `classify`, `detect-signals`, and `report` commands currently exist as scaffolding placeholders.
@@ -98,6 +129,7 @@ The test suite covers config loading, DB initialization, repository plumbing, CL
 - Market data uses a mock provider instead of a production source.
 - Ticker extraction is regex-based and only checks a local universe file.
 - Sentiment, anomaly scoring, lead/lag labeling, pump-risk detection, and LLM classification are placeholders.
+- The OpenAI LLM path is implemented for structured discussion classification, but the surrounding shortlist and scoring logic is still simplistic.
 - Pipeline stages are orchestrated in `run-all`; several stage-specific commands are still scaffolds.
 
 ## Planned Stage 2 Improvements
